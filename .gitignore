@@ -1,0 +1,6 @@
+### CircuitPython ###
+.Trashes
+.metadata_never_index
+.fseventsd/
+boot_out.txt
+secrets.py

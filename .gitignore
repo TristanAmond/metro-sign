@@ -2,5 +2,6 @@
 .Trashes
 .metadata_never_index
 .fseventsd/
+.idea
 boot_out.txt
 secrets.py

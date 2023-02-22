@@ -311,7 +311,7 @@ while True:
 
     current_timer = time.time()
     # update weather in ten minute intervals
-    if current_timer - last_weather_check > 10 * 60 and check_night_mode() is False:
+    if current_timer - last_weather_check > 10 * 60:
         # update weather data
         weather = get_weather(secrets['dc coords x'], secrets['dc coords y'])
         gc.collect()

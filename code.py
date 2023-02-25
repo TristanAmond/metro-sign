@@ -1,9 +1,6 @@
 from adafruit_display_text import label
 from adafruit_bitmap_font import bitmap_font
 import board
-import displayio
-import framebufferio
-import rgbmatrix
 import terminalio
 import gc
 import time
@@ -12,7 +9,6 @@ from digitalio import DigitalInOut, Pull
 import neopixel
 import adafruit_apds9960.apds9960
 from adafruit_apds9960 import colorutility
-from adafruit_debouncer import Debouncer
 from adafruit_matrixportal.matrix import Matrix
 import adafruit_requests as requests
 from adafruit_esp32spi import adafruit_esp32spi

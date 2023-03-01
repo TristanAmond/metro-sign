@@ -6,3 +6,5 @@
 boot_out.txt
 secrets.py
 metro-sign-service-acct.json
+credentials.json
+token.json

@@ -1,12 +1,12 @@
 from adafruit_display_text import label
 from adafruit_bitmap_font import bitmap_font
 import board
-import terminalio
 import gc
 import time
 import busio
 from digitalio import DigitalInOut, Pull
 import neopixel
+import json
 import adafruit_apds9960.apds9960
 from adafruit_apds9960 import colorutility
 from adafruit_matrixportal.matrix import Matrix
@@ -54,9 +54,8 @@ highest_temp = [None,None]
 # daily lowest temperature
 # min_temp, day of the year
 lowest_temp = [None, None]
-# current temperature
-# current_temp, time.time()
-current_temp = [None, None]
+# current temp (for historical)
+current_temp = []
 
 # timezone offset from OpenWeather response
 timezone_offset = None
@@ -84,7 +83,6 @@ wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(esp, secrets, status_lig
 print("WiFi loaded")
 
 gc.collect()
-#print("Point 1 available memory: {} bytes".format(gc.mem_free()))
 
 # --- CLASSES ---
 
@@ -104,7 +102,7 @@ def get_trains(StationCode, historical_trains):
         # query WMATA API with input StationCode
         URL = 'https://api.wmata.com/StationPrediction.svc/json/GetPrediction/'
         payload = {'api_key': secrets['wmata api key']}
-        response = wifi.get(URL + StationCode, headers=payload)
+        response = requests.get(URL + StationCode, headers=payload)
         json_data = response.json()
     except OSError as e:
         print("Failed to get data, retrying\n", e)
@@ -128,14 +126,8 @@ def get_trains(StationCode, historical_trains):
             else:
                 pass
 
-    except NameError as e:
-        print(e)
-        print ("No trains returned from WMATA API.")
-        pass
-
-    except TypeError as e:
-        print(e)
-        print ("No trains returned from WMATA API.")
+    except Exception as e:
+        print ("Error accessing the WMATA API: ", e)
         pass
 
     # merge train objects into trains array
@@ -203,10 +195,14 @@ def get_weather(lat, long):
             highest_temp[0] = weather_data["daily_temp_max"]
             highest_temp[1] = current_time.tm_wday
             print("Daily highest temp set to {}".format(highest_temp[0]))
-        # if daily highest temp is current but less than existing highest temp
+        # if stored highest temp is less than new highest temp
         elif highest_temp[0] < weather_data["daily_temp_max"]:
             highest_temp[0] = weather_data["daily_temp_max"]
             print("Daily highest temp set to {}".format(highest_temp[0]))
+        # if stored highest temp is greater than new highest temp
+        elif highest_temp[0] > weather_data["daily_temp_max"]:
+            weather_data["daily_temp_max"] = highest_temp[0]
+            print("Daily highest temp pulled from historical data")
 
         # set daily lowest temperature
         global lowest_temp
@@ -215,17 +211,18 @@ def get_weather(lat, long):
             lowest_temp[0] = weather_data["daily_temp_min"]
             lowest_temp[1] = current_time.tm_wday
             print("Daily lowest temp set to {}".format(lowest_temp[0]))
-        # if daily lowest temp is current but more than existing lowest temp
+        # if daily lowest temp is greater than new lowest temp
         elif lowest_temp[0] > weather_data["daily_temp_min"]:
             lowest_temp[0] = weather_data["daily_temp_min"]
             print("Daily lowest temp set to {}".format(lowest_temp[0]))
+        # if daily lowest temp is less than new lowest temp
+        elif lowest_temp[0] < weather_data["daily_temp_min"]:
+            weather_data["daily_temp_min"] = lowest_temp[0]
+            print("Daily lowest temp pulled from historical data")
 
-        # set current temperature every 10 minutes
-        if current_temp [0] is None or current_temp[1] - time.time() > 10 * 60:
-            current_temp[0] = weather_data["current_temp"]
-            current_temp[1] = time.time()
-            print("Current temp set to: {}".format(current_temp[0]))
-
+        # add current temp to historical array
+        global current_temp
+        current_temp.append(weather_data["current_temp"])
         # clean up response
         del response
 
@@ -288,13 +285,15 @@ def check_open(current_time, shut_off_hour):
         #print("Metro is open")
         return True
 
+
 # --- OPERATING LOOP ------------------------------------------
 
 # TODO shift all function mgmt to weather_code style with checks and faster loop repetition
+# TODO use requests.Session() to open a session at the beginning of any function check
+# and use the same session for any valid requests
 loop_counter=1
 last_weather_check=None
 last_train_check=None
-last_plane_check=None
 
 while True:
 

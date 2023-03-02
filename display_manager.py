@@ -21,6 +21,7 @@ metro_red=0xda1b30
 metro_green=0x49742a
 
 # custom scroll delay for scroll_text
+scroll_delay = 0.03
 
 class display_manager(displayio.Group):
     def __init__(

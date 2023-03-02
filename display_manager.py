@@ -12,15 +12,15 @@ icon_spritesheet = cwd + "/bmp/weather-icons.bmp"
 icon_width = 16
 icon_height = 16
 
-# forkawesome size 12 icons
-#icon_library = bitmap_font.load_font("/pcf/forkawesome-12.pcf")
-
 # custom font for temperature trend indicators
 symbol_font = bitmap_font.load_font("/bdf/custom_bellota.bdf")
 
+# custom colors hex codes
 metro_orange=0xf06a37
 metro_red=0xda1b30
 metro_green=0x49742a
+
+# custom scroll delay for scroll_text
 
 class display_manager(displayio.Group):
     def __init__(
@@ -32,6 +32,12 @@ class display_manager(displayio.Group):
         # set up label groups
         self.root_group = displayio.Group()
         self.root_group.append(self)
+
+        # create scrolling notification group
+        self._scrolling_group = displayio.Group()
+        # hide scrolling group by default
+        self._scrolling_group.hidden = True
+        self.append(self._scrolling_group)
 
         # create current weather icon group
         # TODO center icon on 16x16 top-left segment
@@ -145,6 +151,13 @@ class display_manager(displayio.Group):
         self.bottom_row_train_min.color = metro_orange
         self.bottom_row_train_min.text = "0"
         self._train_board_group.append(self.bottom_row_train_min)
+
+        # create scrolling label (top row by default)
+        self.scrolling_label = Label(terminalio.FONT)
+        self.scrolling_label.x = 0
+        self.scrolling_label.y = self.row1
+        self.scrolling_label.color = 0xFFFFFF
+        self._scrolling_group.append(self.scrolling_label)
 
         # default icon set to none
         self.set_icon(None)
@@ -266,6 +279,21 @@ class display_manager(displayio.Group):
 
         except TypeError as e:
             print(e)
+
+    def scroll_text(self, label_text, row):
+        self._scrolling_group.x = self.display.width
+        if row is 1:
+            self._scrolling_group.y = self.row1
+        else:
+            self._scrolling_group.y = self.row2
+        self.scrolling_label.text = label_text
+        self._scrolling_group.hidden = False
+
+        for _ in range(self.display.width * 3.5):
+            self._scrolling_group.x = self._scrolling_group.x - 1
+            time.sleep(scroll_delay)
+        self._scrolling_group.hidden = True
+        self.refresh_display()
 
     # refresh the root group on the display
     def refresh_display(self):

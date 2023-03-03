@@ -104,10 +104,7 @@ def get_trains(StationCode, historical_trains):
         payload = {'api_key': secrets['wmata api key']}
         response = requests.get(URL + StationCode, headers=payload)
         json_data = response.json()
-    except OSError as e:
-        print("Failed to get data, retrying\n", e)
-        wifi.reset()
-    except RuntimeError as e:
+    except Exception as e:
         print("Failed to get data, retrying\n", e)
         wifi.reset()
 
@@ -140,7 +137,7 @@ def get_trains(StationCode, historical_trains):
         historical_trains[1] = B_train
     # print train data
     try:
-        for item in Trains:
+        for item in trains:
             print("{} {}: {}".format(item.destination_code, item.destination_name, item.minutes))
     except:
         pass
@@ -321,10 +318,16 @@ while True:
     # run garbage collection
     gc.collect()
 
+    # update time and notify of on the hour
+    current_time = check_time(weather["dt"], timezone_offset)
+    if current_time.tm_min is 0:
+        display_manager.scroll_text("The time is\n   {}:{}".format(current_time.tm_hour, current_time.tm_min))
+
     # update weather display component
     display_manager.update_weather(weather)
     # update train display component
     display_manager.assign_trains(trains, historical_trains)
+
     display_manager.refresh_display()
     # print available memory
     print("Loop {} available memory: {} bytes".format(loop_counter, gc.mem_free()))

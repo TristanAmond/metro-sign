@@ -16,9 +16,9 @@ icon_height = 16
 symbol_font = bitmap_font.load_font("/bdf/custom_bellota.bdf")
 
 # custom colors hex codes
-metro_orange = 0xf06a37
-metro_red = 0xda1b30
-metro_green = 0x49742a
+metro_orange=0xf06a37
+metro_red=0xda1b30
+metro_green=0x49742a
 
 # custom scroll delay for scroll_text
 scroll_delay = 0.03
@@ -68,12 +68,12 @@ class display_manager(displayio.Group):
         self.append(self._train_board_group)
 
         # set default column and row measurements (NOTE: default config is 1)
-        self.col1 = 4
-        self.col2 = 28
-        self.col25 = 52
-        self.col3 = 108
-        self.row1 = 8
-        self.row2 = 24
+        self.col1=4
+        self.col2=28
+        self.col25=52
+        self.col3=108
+        self.row1=8
+        self.row2=24
 
         # Load the icon sprite sheet
         icons = displayio.OnDiskBitmap(open(icon_spritesheet, "rb"))
@@ -150,7 +150,7 @@ class display_manager(displayio.Group):
         self.bottom_row_train_min.text = "0"
         self._train_board_group.append(self.bottom_row_train_min)
 
-        # create scrolling label (top row by default)
+        # create row scrolling label
         self.scrolling_label = Label(terminalio.FONT)
         self.scrolling_label.x = 0
         self.scrolling_label.y = self.row1
@@ -185,7 +185,7 @@ class display_manager(displayio.Group):
     # helper function to assign color to minutes labels
     def get_minutes_color(self, minutes):
         try:
-            if minutes == "ARR" or minutes == "BRD":
+            if minutes=="ARR" or minutes=="BRD":
                 return metro_red
             else:
                 return metro_orange
@@ -210,7 +210,7 @@ class display_manager(displayio.Group):
             temp_diff_default = 1
             temp_diff = weather["hourly_next_temp"] - weather["current_temp"]
             if temp_diff > 0 and temp_diff > temp_diff_default:
-                # print("trending higher by {}".format(temp_diff))
+                #print("trending higher by {}".format(temp_diff))
                 # comma is increase arrow
                 self.temp_trend_icon.text = ","
                 self.temp_trend_icon.color = metro_red
@@ -218,7 +218,7 @@ class display_manager(displayio.Group):
                 self._temp_trend_group.hidden = False
 
             elif temp_diff < 0 and abs(temp_diff) > temp_diff_default:
-                # print("trending lower by {}".format(abs(temp_diff)))
+                #print("trending lower by {}".format(abs(temp_diff)))
                 # period is decrease arrow
                 self.temp_trend_icon.text = "."
                 self.temp_trend_icon.color = 0x1e81b0
@@ -226,7 +226,7 @@ class display_manager(displayio.Group):
                 self._temp_trend_group.hidden = False
 
             else:
-                # print("no trend at {}".format(temp_diff))
+                #print("no trend at {}".format(temp_diff))
                 self._temp_trend_group.hidden = True
         else:
             self.temp_text.text = "..."
@@ -278,12 +278,9 @@ class display_manager(displayio.Group):
         except TypeError as e:
             print(e)
 
-    def scroll_text(self, label_text, row):
+    # use \n newline to access bottom row
+    def scroll_text(self, label_text):
         self._scrolling_group.x = self.display.width
-        if row is 1:
-            self._scrolling_group.y = self.row1
-        else:
-            self._scrolling_group.y = self.row2
         self.scrolling_label.text = label_text
         self._weather_group.hidden = True
         self._train_board_group.hidden = True

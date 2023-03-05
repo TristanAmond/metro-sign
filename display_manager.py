@@ -34,6 +34,12 @@ class display_manager(displayio.Group):
         self.root_group = displayio.Group()
         self.root_group.append(self)
 
+        # create night mode group
+        self._night_mode_group = displayio.Group()
+        # hide night mode group by default
+        self._night_mode_group.hidden = True
+        self.append(self._night_mode_group)
+
         # create scrolling notification group
         self._scrolling_group = displayio.Group()
         # hide scrolling group by default
@@ -278,6 +284,18 @@ class display_manager(displayio.Group):
         except TypeError as e:
             print(e)
 
+    def night_mode_toggle(self, trigger):
+        # night mode is activated, hide all groups
+        if trigger:
+            self._weather_group.hidden = False
+            self._train_board_group.hidden = False
+            self._night_mode_group.hidden = True
+        # night mode is deactivated, show all groups
+        else:
+            self._weather_group.hidden = True
+            self._train_board_group.hidden = True
+            self._night_mode_group.hidden = False
+
     # use \n newline to access bottom row
     def scroll_text(self, label_text):
         self._scrolling_group.x = self.display.width
@@ -286,7 +304,7 @@ class display_manager(displayio.Group):
         self._train_board_group.hidden = True
         self._scrolling_group.hidden = False
 
-        for _ in range(self.display.width * 3.5):
+        for _ in range(self.display.width + len(label_text) * 4):
             self._scrolling_group.x = self._scrolling_group.x - 1
             time.sleep(scroll_delay)
         self._scrolling_group.hidden = True

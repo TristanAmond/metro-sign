@@ -124,6 +124,8 @@ def get_trains(StationCode, historical_trains):
     # check trains in json response for correct destination code prefixes
     try:
         for item in json_data['Trains']:
+            if item['Line'] is not "RD":
+                pass
             # if no train and destination code prefix matches, add
             if item['DestinationCode'][0] is "A" and A_train is None:
                 A_train = Train(item['Destination'], item['DestinationName'], item['DestinationCode'], item['Min'])

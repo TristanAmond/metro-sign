@@ -112,7 +112,7 @@ def get_trains(StationCode, historical_trains):
         # query WMATA API with input StationCode
         URL = 'https://api.wmata.com/StationPrediction.svc/json/GetPrediction/'
         payload = {'api_key': secrets['wmata api key']}
-        response = requests.get(URL + StationCode, headers=payload)
+        response = wifi.get(URL + StationCode, headers=payload)
         json_data = response.json()
     except Exception as e:
         print("Failed to get data, retrying\n", e)

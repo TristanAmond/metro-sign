@@ -253,9 +253,10 @@ class display_manager(displayio.Group):
                 # set min and min text colors
                 self.top_row_train_min.text = trains[0].minutes
                 self.top_row_train_min.color = self.get_minutes_color(trains[0].minutes)
+
             # no A train data
             elif historical_trains[0] is not None:
-                self.top_row_train_text.text = "Shady Gr"
+                self.top_row_train_text.text = historical_trains[0].destination
                 self.top_row_train_min.text = historical_trains[0].minutes
                 self.top_row_train_min.color = 0xFFFFFF
             else:
@@ -273,9 +274,10 @@ class display_manager(displayio.Group):
                 # set min and min text colors
                 self.bottom_row_train_min.text = trains[1].minutes
                 self.bottom_row_train_min.color = self.get_minutes_color(trains[1].minutes)
+
             # no B train data
             elif historical_trains[1] is not None:
-                self.bottom_row_train_text.text = "Glenmont"
+                self.bottom_row_train_text.text = historical_trains[1].destination
                 self.bottom_row_train_min.text = historical_trains[1].minutes
                 self.bottom_row_train_min.color = 0xFFFFFF
             else:

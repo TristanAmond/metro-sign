@@ -76,7 +76,7 @@ esp = adafruit_esp32spi.ESP_SPIcontrol(spi, esp32_cs, esp32_ready, esp32_reset)
 # Initialize neopixel status light
 status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 # Initialize wifi object
-wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(esp, secrets, status_light)
+wifi = adafruit_esp32spi_wifimanager.ESPSPI_WiFiManager(esp, secrets, status_light, attempts=5)
 
 print("WiFi loaded")
 
@@ -106,7 +106,7 @@ class Plane:
 # --- FUNCTIONS ---
 
 # queries WMATA API to return a dict with all unique train destinations, sorted by min
-# input is StationCode from WMATA API
+# input is StationCode from secrets.py
 def get_trains(StationCode, historical_trains):
     try:
         # query WMATA API with input StationCode
@@ -155,6 +155,31 @@ def get_trains(StationCode, historical_trains):
         pass
     return trains
 
+# queries WMATAI to return a dict with all relevant station incident objects\
+# input is StationCode from secrets.py, line (e.g. "RD", "YL", etc.)
+def get_train_incidents(station_code, line):
+
+    incidents = []
+    # fetch incident data from WMATA
+    try:
+        URL = 'https://api.wmata.com/Incidents.svc/json/Incidents'
+        payload = {'api_key': secrets['wmata api key']}
+        response = wifi.get(URL, headers=payload)
+        json_data = response.json()
+    except Exception as e:
+        print("Failed to get data, retrying\n", e)
+        wifi.reset()
+
+# check for Line impact
+    try:
+        for item in json_data['Incidents']:
+            if line in item['LinesAffected']:
+                incidents.append(item)
+    except Exception as e:
+        print("get_train_incidents Exception: {}".format(e))
+
+    return incidents
+
 # queries local ADS-B reciever with dump1090-fa installed for flight data
 # adds unseen flights to the plane array
 # input is plane array
@@ -162,19 +187,18 @@ def get_planes(historical_planes):
     # set local variables
     plane_counter = 0
     planes = {}
-    json_dump = None
+    json_data = None
     # request plane.json from local ADS-B receiver (default location for dump1090-fa)
     try:
         response = wifi.get("http://{}/tar1090/data/aircraft.json".format(secrets['ip_address']))
-        json_dump = response.json()
+        json_data = response.json()
     except Exception as e:
         print("Failed to get data, retrying\n", e)
         wifi.reset()
-    gc.collect()
 
-    if json_dump:
+    if json_data:
     # iterate through each aircraft entry
-        for entry in json_dump["aircraft"]:
+        for entry in json_data["aircraft"]:
             # if flight callsign exists
             if "flight" in entry:
                 try:
@@ -302,12 +326,13 @@ def check_time():
     except Exception as e:
         print(e)
         wifi.reset()
+        wifi.connect()
     return (time_json)
 
 def check_open(current_time, shut_off_hour):
     # SET OPENING TIME
     # current day is Sat/Sun and time is before 7
-    if current_time["hour"] <= 7 and (current_time["wday"] < 7 or current_time["wday"] is 0):
+    if current_time["hour"] < 7 and (current_time["wday"] < 7 or current_time["wday"] is 0):
         print("Metro closed: Sat/Sun before 7| D{} H{}".format(
         current_time["wday"], current_time["hour"]
         ))
@@ -336,11 +361,14 @@ def check_open(current_time, shut_off_hour):
 loop_counter=1
 last_weather_check=None
 last_train_check=None
+last_incident_check=None
 last_plane_check=None
+last_time_check=None
 day_mode=True
 
 while True:
-    current_time = check_time()
+    if last_time_check is None or time.monotonic() > last_time_check + 60*10:
+        current_time = check_time()
     try:
         day_mode = check_open(current_time, 22)
         display_manager.night_mode_toggle(day_mode)
@@ -349,7 +377,7 @@ while True:
         pass
 
     if day_mode is True:
-        # fetch weather data on start and every 10 minutes
+        # fetch weather data on start and recurring (default: 10 minutes)
         if last_weather_check is None or time.monotonic() > last_weather_check + 60 * 10:
             weather = get_weather(secrets['dc coords x'], secrets['dc coords y'])
             last_weather_check = time.monotonic()
@@ -364,6 +392,18 @@ while True:
             # update train display component
             display_manager.assign_trains(trains, historical_trains)
 
+        # update train incident data (default: 1 minute)
+        if last_incident_check is None or time.monotonic() > last_incident_check + 60 * 1:
+            incidents = get_train_incidents(station_code, "RD")
+            if len(incidents) > 0:
+                for item in incidents:
+                    print("Desc.: {}\nStartLocation: {} | EndLocation: {}".format(
+                    item['Description'],
+                    item['StartLocationFullName'],
+                    item['EndLocationFullName']
+                    ))
+            last_incident_check = time.monotonic()
+
         # update plane data (default: 60 seconds)
         if last_plane_check is None or time.monotonic() > last_plane_check + 60:
             planes = get_planes(historical_planes)
@@ -375,12 +415,12 @@ while True:
             plane = planes.popitem()[1]
             display_manager.scroll_text("Flight {}\n  Alt: {}".format(plane.flight, plane.alt_geom))
 
-        # run garbage collection
-        gc.collect()
-
     display_manager.refresh_display()
     # print available memory
     print("Loop {} available memory: {} bytes".format(loop_counter, gc.mem_free()))
+
+    # run garbage collection
+    gc.collect()
 
     # increment loop and sleep for 10 seconds
     loop_counter+=1
